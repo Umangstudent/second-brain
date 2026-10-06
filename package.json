@@ -1,0 +1,14 @@
+{
+  "name": "second-brain",
+  "version": "1.0.0",
+  "description": "A platform to manage links, notes and documents with AI-powered search",
+  "scripts": {
+    "server": "cd server && npm run dev",
+    "client": "cd client && npm run dev",
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "install-all": "npm install && cd server && npm install && cd ../client && npm install"
+  },
+  "dependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

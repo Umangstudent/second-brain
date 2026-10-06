@@ -1,0 +1,56 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-surface text-white/90 font-sans antialiased min-h-screen selection:bg-brand-500/30 selection:text-white overflow-x-hidden;
+    /* Subtle grid pattern background */
+    background-image: linear-gradient(to right, rgba(255,255,255,0.02) 1px, transparent 1px),
+                      linear-gradient(to bottom, rgba(255,255,255,0.02) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-surface-50;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-surface-200 rounded-full hover:bg-surface-100 transition-colors;
+  }
+}
+
+@layer components {
+  .glass-card {
+    @apply bg-white/5 backdrop-blur-xl border border-white/10 shadow-xl;
+  }
+  .glass-panel {
+    @apply bg-surface/80 backdrop-blur-xl border border-white/10;
+  }
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-brand-400 to-purple-400;
+  }
+  .bg-gradient-brand {
+    @apply bg-gradient-to-r from-brand-500 to-purple-500;
+  }
+  
+  .btn-primary {
+    @apply bg-gradient-brand text-white px-4 py-2 rounded-lg font-medium shadow-lg shadow-brand-500/25 hover:shadow-brand-500/40 hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-brand-500/25;
+  }
+  .btn-secondary {
+    @apply glass-card text-white px-4 py-2 rounded-lg font-medium hover:bg-white/10 hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0;
+  }
+  
+  .input-field {
+    @apply w-full bg-surface-50/50 border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-brand-500/50 focus:border-brand-500/50 transition-all;
+  }
+}
+
+/* Utilities for smooth transitions */
+* {
+  @apply transition-colors duration-200 ease-in-out;
+}
