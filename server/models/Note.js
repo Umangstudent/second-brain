@@ -35,6 +35,5 @@ const noteSchema = new mongoose.Schema({
 });
 
 noteSchema.index({ user: 1, tags: 1 });
-noteSchema.index({ shareHash: 1 });
 
 module.exports = mongoose.model('Note', noteSchema);

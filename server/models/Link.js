@@ -39,6 +39,5 @@ const linkSchema = new mongoose.Schema({
 });
 
 linkSchema.index({ user: 1, tags: 1 });
-linkSchema.index({ shareHash: 1 });
 
 module.exports = mongoose.model('Link', linkSchema);

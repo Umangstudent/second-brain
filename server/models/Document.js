@@ -44,6 +44,5 @@ const documentSchema = new mongoose.Schema({
 });
 
 documentSchema.index({ user: 1, tags: 1 });
-documentSchema.index({ shareHash: 1 });
 
 module.exports = mongoose.model('Document', documentSchema);
