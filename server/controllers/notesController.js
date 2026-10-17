@@ -5,8 +5,9 @@ const { v4: uuidv4 } = require('uuid');
 
 exports.getNotes = async (req, res) => {
   try {
-    const { search, tags, page, limit, sort } = req.query;
-    let query = { user: req.user.id };
+    const { search, tags, page, limit, sort, all } = req.query;
+    const isAdmin = req.user.role === 'admin';
+    let query = (isAdmin && all === 'true') ? {} : { user: req.user.id };
 
     if (search) {
       query.$or = [
@@ -34,7 +35,8 @@ exports.getNotes = async (req, res) => {
 
 exports.getNoteById = async (req, res) => {
   try {
-    const note = await Note.findOne({ _id: req.params.id, user: req.user.id });
+    const filter = req.user.role === 'admin' ? { _id: req.params.id } : { _id: req.params.id, user: req.user.id };
+    const note = await Note.findOne(filter);
     if (!note) return res.status(404).json({ error: 'Note not found' });
     res.json(note);
   } catch (error) {
@@ -73,8 +75,9 @@ exports.createNote = async (req, res) => {
 exports.updateNote = async (req, res) => {
   try {
     const { title, content, tags, isPublic } = req.body;
+    const filter = req.user.role === 'admin' ? { _id: req.params.id } : { _id: req.params.id, user: req.user.id };
 
-    const note = await Note.findOne({ _id: req.params.id, user: req.user.id });
+    const note = await Note.findOne(filter);
     if (!note) return res.status(404).json({ error: 'Note not found' });
 
     if (title !== undefined) note.title = title;
@@ -104,7 +107,8 @@ exports.updateNote = async (req, res) => {
 
 exports.deleteNote = async (req, res) => {
   try {
-    const note = await Note.findOneAndDelete({ _id: req.params.id, user: req.user.id });
+    const filter = req.user.role === 'admin' ? { _id: req.params.id } : { _id: req.params.id, user: req.user.id };
+    const note = await Note.findOneAndDelete(filter);
     if (!note) return res.status(404).json({ error: 'Note not found' });
     res.json({ message: 'Note removed' });
   } catch (error) {
@@ -114,7 +118,8 @@ exports.deleteNote = async (req, res) => {
 
 exports.toggleShare = async (req, res) => {
   try {
-    const note = await Note.findOne({ _id: req.params.id, user: req.user.id });
+    const filter = req.user.role === 'admin' ? { _id: req.params.id } : { _id: req.params.id, user: req.user.id };
+    const note = await Note.findOne(filter);
     if (!note) return res.status(404).json({ error: 'Note not found' });
 
     note.isPublic = !note.isPublic;

@@ -5,8 +5,9 @@ const { v4: uuidv4 } = require('uuid');
 
 exports.getLinks = async (req, res) => {
   try {
-    const { search, tags, page, limit, sort } = req.query;
-    let query = { user: req.user.id };
+    const { search, tags, page, limit, sort, all } = req.query;
+    const isAdmin = req.user.role === 'admin';
+    let query = (isAdmin && all === 'true') ? {} : { user: req.user.id };
 
     if (search) {
       query.$or = [
@@ -35,7 +36,8 @@ exports.getLinks = async (req, res) => {
 
 exports.getLinkById = async (req, res) => {
   try {
-    const link = await Link.findOne({ _id: req.params.id, user: req.user.id });
+    const filter = req.user.role === 'admin' ? { _id: req.params.id } : { _id: req.params.id, user: req.user.id };
+    const link = await Link.findOne(filter);
     if (!link) return res.status(404).json({ error: 'Link not found' });
     res.json(link);
   } catch (error) {
@@ -75,8 +77,9 @@ exports.createLink = async (req, res) => {
 exports.updateLink = async (req, res) => {
   try {
     const { title, url, description, tags, isPublic } = req.body;
+    const filter = req.user.role === 'admin' ? { _id: req.params.id } : { _id: req.params.id, user: req.user.id };
 
-    const link = await Link.findOne({ _id: req.params.id, user: req.user.id });
+    const link = await Link.findOne(filter);
     if (!link) return res.status(404).json({ error: 'Link not found' });
 
     if (title !== undefined) link.title = title;
@@ -107,7 +110,8 @@ exports.updateLink = async (req, res) => {
 
 exports.deleteLink = async (req, res) => {
   try {
-    const link = await Link.findOneAndDelete({ _id: req.params.id, user: req.user.id });
+    const filter = req.user.role === 'admin' ? { _id: req.params.id } : { _id: req.params.id, user: req.user.id };
+    const link = await Link.findOneAndDelete(filter);
     if (!link) return res.status(404).json({ error: 'Link not found' });
     res.json({ message: 'Link removed' });
   } catch (error) {
@@ -117,7 +121,8 @@ exports.deleteLink = async (req, res) => {
 
 exports.toggleShare = async (req, res) => {
   try {
-    const link = await Link.findOne({ _id: req.params.id, user: req.user.id });
+    const filter = req.user.role === 'admin' ? { _id: req.params.id } : { _id: req.params.id, user: req.user.id };
+    const link = await Link.findOne(filter);
     if (!link) return res.status(404).json({ error: 'Link not found' });
 
     link.isPublic = !link.isPublic;

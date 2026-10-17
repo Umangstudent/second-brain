@@ -20,9 +20,14 @@ export const AuthProvider = ({ children }) => {
           const payloadBase64 = storedToken.split('.')[1];
           if (payloadBase64) {
             const decodedPayload = JSON.parse(atob(payloadBase64));
-            setUser({ id: decodedPayload.userId || decodedPayload.id, username: decodedPayload.username || 'User' });
+            setUser({
+              id: decodedPayload.id || decodedPayload.userId,
+              username: decodedPayload.username || 'User',
+              role: decodedPayload.role || 'user',
+              isAdmin: decodedPayload.role === 'admin'
+            });
           } else {
-             setUser({ username: 'User' });
+            setUser({ username: 'User', role: 'user', isAdmin: false });
           }
           setToken(storedToken);
         } catch (error) {
@@ -44,26 +49,38 @@ export const AuthProvider = ({ children }) => {
   const login = async (email, password) => {
     try {
       const response = await api.post('/auth/login', { email, password });
-      const { token: newToken, user: userData } = response.data;
+      const { token: newToken, ...userData } = response.data;
       localStorage.setItem('sb_token', newToken);
       setToken(newToken);
-      setUser(userData || { username: email.split('@')[0] });
+      setUser({
+        id: userData._id || userData.id,
+        username: userData.username || email.split('@')[0],
+        email: userData.email,
+        role: userData.role || 'user',
+        isAdmin: userData.role === 'admin'
+      });
       return { success: true };
     } catch (error) {
-      return { success: false, error: error.response?.data?.message || 'Login failed' };
+      return { success: false, error: error.response?.data?.error || error.response?.data?.message || 'Login failed' };
     }
   };
 
-  const register = async (username, email, password) => {
+  const register = async (username, email, password, role = 'user') => {
     try {
-      const response = await api.post('/auth/register', { username, email, password });
-      const { token: newToken, user: userData } = response.data;
+      const response = await api.post('/auth/register', { username, email, password, role });
+      const { token: newToken, ...userData } = response.data;
       localStorage.setItem('sb_token', newToken);
       setToken(newToken);
-      setUser(userData || { username });
+      setUser({
+        id: userData._id || userData.id,
+        username: userData.username || username,
+        email: userData.email,
+        role: userData.role || role,
+        isAdmin: (userData.role || role) === 'admin'
+      });
       return { success: true };
     } catch (error) {
-      return { success: false, error: error.response?.data?.message || 'Registration failed' };
+      return { success: false, error: error.response?.data?.error || error.response?.data?.message || 'Registration failed' };
     }
   };
 

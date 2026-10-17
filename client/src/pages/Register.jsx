@@ -7,6 +7,7 @@ const Register = () => {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [role, setRole] = useState('user');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   
@@ -28,7 +29,7 @@ const Register = () => {
     }
 
     setIsSubmitting(true);
-    const result = await register(username, email, password);
+    const result = await register(username, email, password, role);
     
     if (result.success) {
       navigate('/');
@@ -87,9 +88,36 @@ const Register = () => {
               type="password" 
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="Password"
+              placeholder="Password (min. 6 characters)"
               className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-12 pr-4 text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-brand-500/50 transition-all"
             />
+          </div>
+
+          <div className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/10">
+            <div>
+              <p className="text-xs font-semibold text-white">Account Type</p>
+              <p className="text-[10px] text-white/50">Select role for testing RBAC</p>
+            </div>
+            <div className="flex gap-1.5 p-1 bg-black/30 rounded-lg">
+              <button
+                type="button"
+                onClick={() => setRole('user')}
+                className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${
+                  role === 'user' ? 'bg-brand-500 text-white shadow-md' : 'text-white/60 hover:text-white'
+                }`}
+              >
+                User
+              </button>
+              <button
+                type="button"
+                onClick={() => setRole('admin')}
+                className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${
+                  role === 'admin' ? 'bg-purple-600 text-white shadow-md' : 'text-white/60 hover:text-white'
+                }`}
+              >
+                Admin
+              </button>
+            </div>
           </div>
 
           <button 

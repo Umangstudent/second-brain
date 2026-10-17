@@ -11,6 +11,7 @@ const linksRoutes = require('./routes/links');
 const documentsRoutes = require('./routes/documents');
 const shareRoutes = require('./routes/share');
 const aiRoutes = require('./routes/ai');
+const adminRoutes = require('./routes/admin');
 
 const app = express();
 
@@ -29,6 +30,7 @@ app.use('/api/links', linksRoutes);
 app.use('/api/documents', documentsRoutes);
 app.use('/api/share', shareRoutes);
 app.use('/api/ai', aiRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Global Error Handler
 app.use((err, req, res, next) => {

@@ -6,8 +6,9 @@ const { v4: uuidv4 } = require('uuid');
 
 exports.getDocuments = async (req, res) => {
   try {
-    const { search, tags, page, limit, sort } = req.query;
-    let query = { user: req.user.id };
+    const { search, tags, page, limit, sort, all } = req.query;
+    const isAdmin = req.user.role === 'admin';
+    let query = (isAdmin && all === 'true') ? {} : { user: req.user.id };
 
     if (search) {
       query.$or = [
@@ -35,7 +36,8 @@ exports.getDocuments = async (req, res) => {
 
 exports.getDocumentById = async (req, res) => {
   try {
-    const doc = await Document.findOne({ _id: req.params.id, user: req.user.id });
+    const filter = req.user.role === 'admin' ? { _id: req.params.id } : { _id: req.params.id, user: req.user.id };
+    const doc = await Document.findOne(filter);
     if (!doc) return res.status(404).json({ error: 'Document not found' });
     res.json(doc);
   } catch (error) {
@@ -88,7 +90,8 @@ exports.updateDocument = async (req, res) => {
   try {
     const { title, tags, isPublic } = req.body;
 
-    const doc = await Document.findOne({ _id: req.params.id, user: req.user.id });
+    const filter = req.user.role === 'admin' ? { _id: req.params.id } : { _id: req.params.id, user: req.user.id };
+    const doc = await Document.findOne(filter);
     if (!doc) return res.status(404).json({ error: 'Document not found' });
 
     if (title !== undefined) doc.title = title;
@@ -120,7 +123,8 @@ exports.updateDocument = async (req, res) => {
 
 exports.deleteDocument = async (req, res) => {
   try {
-    const doc = await Document.findOneAndDelete({ _id: req.params.id, user: req.user.id });
+    const filter = req.user.role === 'admin' ? { _id: req.params.id } : { _id: req.params.id, user: req.user.id };
+    const doc = await Document.findOneAndDelete(filter);
     if (!doc) return res.status(404).json({ error: 'Document not found' });
     res.json({ message: 'Document removed' });
   } catch (error) {
@@ -130,7 +134,8 @@ exports.deleteDocument = async (req, res) => {
 
 exports.toggleShare = async (req, res) => {
   try {
-    const doc = await Document.findOne({ _id: req.params.id, user: req.user.id });
+    const filter = req.user.role === 'admin' ? { _id: req.params.id } : { _id: req.params.id, user: req.user.id };
+    const doc = await Document.findOne(filter);
     if (!doc) return res.status(404).json({ error: 'Document not found' });
 
     doc.isPublic = !doc.isPublic;

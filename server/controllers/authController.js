@@ -1,14 +1,14 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
-const generateToken = (id, role) => {
-  return jwt.sign({ id, role }, process.env.JWT_SECRET, {
+const generateToken = (id, role, username) => {
+  return jwt.sign({ id, role, username }, process.env.JWT_SECRET, {
     expiresIn: '7d',
   });
 };
 
 exports.register = async (req, res) => {
-  const { username, email, password } = req.body;
+  const { username, email, password, role } = req.body;
 
   try {
     const userExists = await User.findOne({ $or: [{ email }, { username }] });
@@ -17,10 +17,13 @@ exports.register = async (req, res) => {
       return res.status(400).json({ error: 'User already exists' });
     }
 
+    const userRole = role === 'admin' ? 'admin' : 'user';
+
     const user = await User.create({
       username,
       email,
       password,
+      role: userRole,
     });
 
     res.status(201).json({
@@ -28,7 +31,7 @@ exports.register = async (req, res) => {
       username: user.username,
       email: user.email,
       role: user.role,
-      token: generateToken(user._id, user.role),
+      token: generateToken(user._id, user.role, user.username),
     });
   } catch (error) {
     res.status(500).json({ error: 'Server error' });
@@ -47,7 +50,7 @@ exports.login = async (req, res) => {
         username: user.username,
         email: user.email,
         role: user.role,
-        token: generateToken(user._id, user.role),
+        token: generateToken(user._id, user.role, user.username),
       });
     } else {
       res.status(401).json({ error: 'Invalid email or password' });

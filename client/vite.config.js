@@ -12,9 +12,13 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
-        manualChunks: {
-          vendor: ['react', 'react-dom', 'react-router-dom'],
-          ui: ['lucide-react', 'react-markdown'],
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('lucide-react') || id.includes('react-markdown')) {
+              return 'ui';
+            }
+            return 'vendor';
+          }
         }
       }
     }
