@@ -1,17 +1,15 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { StickyNote, Link2, FileText, Plus, Bot } from 'lucide-react';
+import { StickyNote, Link2, FileText, Plus } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import api from '../api/axios';
 import ContentCard from '../components/ContentCard';
-import AIChatPanel from '../components/AIChatPanel';
 
 const Dashboard = () => {
   const { user } = useAuth();
   const [stats, setStats] = useState({ notes: 0, links: 0, documents: 0 });
   const [recentItems, setRecentItems] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [isChatOpen, setIsChatOpen] = useState(false);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -19,22 +17,26 @@ const Dashboard = () => {
         // In a real app, you'd likely have a specific /dashboard endpoint
         // For now, we'll simulate it by fetching lists and getting counts
         const [notesRes, linksRes, docsRes] = await Promise.all([
-          api.get('/notes?limit=2').catch(() => ({ data: { items: [], total: 0 } })),
-          api.get('/links?limit=2').catch(() => ({ data: { items: [], total: 0 } })),
-          api.get('/documents?limit=2').catch(() => ({ data: { items: [], total: 0 } }))
+          api.get('/notes?limit=5').catch(() => ({ data: { data: [], pagination: { totalItems: 0 } } })),
+          api.get('/links?limit=5').catch(() => ({ data: { data: [], pagination: { totalItems: 0 } } })),
+          api.get('/documents?limit=5').catch(() => ({ data: { data: [], pagination: { totalItems: 0 } } }))
         ]);
 
+        const notesData = notesRes.data.data || notesRes.data.items || [];
+        const linksData = linksRes.data.data || linksRes.data.items || [];
+        const docsData = docsRes.data.data || docsRes.data.items || [];
+
         setStats({
-          notes: notesRes.data.total || 0,
-          links: linksRes.data.total || 0,
-          documents: docsRes.data.total || 0
+          notes: notesRes.data.pagination?.totalItems || notesRes.data.total || notesData.length,
+          links: linksRes.data.pagination?.totalItems || linksRes.data.total || linksData.length,
+          documents: docsRes.data.pagination?.totalItems || docsRes.data.total || docsData.length
         });
 
         // Combine and sort recent items
         const combined = [
-          ...(notesRes.data.items || []).map(item => ({ ...item, type: 'note' })),
-          ...(linksRes.data.items || []).map(item => ({ ...item, type: 'link' })),
-          ...(docsRes.data.items || []).map(item => ({ ...item, type: 'document' }))
+          ...notesData.map(item => ({ ...item, type: 'note' })),
+          ...linksData.map(item => ({ ...item, type: 'link' })),
+          ...docsData.map(item => ({ ...item, type: 'document' }))
         ].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 6);
 
         setRecentItems(combined);
@@ -134,19 +136,6 @@ const Dashboard = () => {
           </div>
         )}
       </div>
-
-      {/* Floating AI Button */}
-      <button 
-        onClick={() => setIsChatOpen(true)}
-        className="fixed bottom-6 right-6 p-4 rounded-full bg-gradient-brand text-white shadow-xl shadow-brand-500/25 hover:shadow-brand-500/40 hover:-translate-y-1 transition-all z-40 group"
-      >
-        <Bot className="w-6 h-6" />
-        <span className="absolute right-full mr-4 top-1/2 -translate-y-1/2 bg-surface-100 text-sm font-medium px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap border border-white/10">
-          Ask AI
-        </span>
-      </button>
-
-      <AIChatPanel isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
     </div>
   );
 };

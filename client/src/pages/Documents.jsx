@@ -39,11 +39,12 @@ const Documents = () => {
 
       try {
         const res = await api.get(`/documents?${query.toString()}`);
-        setDocuments(res.data.items || []);
-        setTotalPages(res.data.totalPages || 1);
+        const items = res.data.data || res.data.items || [];
+        setDocuments(items);
+        setTotalPages(res.data.pagination?.totalPages || res.data.totalPages || 1);
         
         const allTags = new Set([...availableTags]);
-        (res.data.items || []).forEach(item => {
+        items.forEach(item => {
           (item.tags || []).forEach(t => allTags.add(t));
         });
         setAvailableTags(Array.from(allTags));
@@ -79,38 +80,43 @@ const Documents = () => {
     e.preventDefault();
     setIsDragging(false);
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      setFile(e.dataTransfer.files[0]);
-      if (!title) setTitle(e.dataTransfer.files[0].name.split('.')[0]);
+      const selected = e.dataTransfer.files[0];
+      setFile(selected);
+      if (!title) setTitle(selected.name.replace(/\.[^/.]+$/, ''));
     }
   };
 
   const handleFileChange = (e) => {
     if (e.target.files && e.target.files[0]) {
-      setFile(e.target.files[0]);
-      if (!title) setTitle(e.target.files[0].name.split('.')[0]);
+      const selected = e.target.files[0];
+      setFile(selected);
+      if (!title) setTitle(selected.name.replace(/\.[^/.]+$/, ''));
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!title.trim() || !file) return;
+    const finalTitle = title.trim() || (file ? file.name.replace(/\.[^/.]+$/, '') : '');
+    if (!finalTitle || !file) {
+      alert('Please select a file to upload.');
+      return;
+    }
 
     setIsSubmitting(true);
     const formData = new FormData();
     formData.append('file', file);
-    formData.append('title', title);
+    formData.append('title', finalTitle);
     if (tags.length > 0) {
-       formData.append('tags', JSON.stringify(tags));
+      formData.append('tags', tags.join(','));
     }
 
     try {
-      await api.post('/documents', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
+      await api.post('/documents', formData);
       setIsModalOpen(false);
       fetchDocs();
     } catch (error) {
       console.error('Failed to upload document:', error);
+      alert(error.response?.data?.error || 'Failed to upload document. Please ensure file is within 10MB.');
     } finally {
       setIsSubmitting(false);
     }
@@ -216,7 +222,7 @@ const Documents = () => {
                     type="text" 
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
-                    placeholder="Document title"
+                    placeholder="Document title (defaults to file name)"
                     className="input-field bg-white/5"
                   />
                 </div>
@@ -253,10 +259,15 @@ const Documents = () => {
               <button 
                 type="submit" 
                 form="doc-form"
-                disabled={isSubmitting || !title.trim() || !file}
+                disabled={isSubmitting || !file}
                 className="btn-primary py-2 px-6 flex items-center gap-2 bg-gradient-to-r from-amber-500 to-orange-500 shadow-amber-500/25 hover:shadow-amber-500/40"
               >
-                {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Upload'}
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Uploading...</span>
+                  </>
+                ) : 'Upload'}
               </button>
             </div>
           </div>

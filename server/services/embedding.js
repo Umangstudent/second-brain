@@ -8,14 +8,23 @@ async function getPipeline() {
   return pipeline;
 }
 
-const generateEmbedding = async (text) => {
+const generateEmbedding = async (text, timeoutMs = 3500) => {
   try {
     if (!text || text.trim() === '') return null;
-    const generate = await getPipeline();
-    const output = await generate(text, { pooling: 'mean', normalize: true });
-    return Array.from(output.data);
+
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Embedding generation timed out')), timeoutMs)
+    );
+
+    const generatePromise = (async () => {
+      const generate = await getPipeline();
+      const output = await generate(text, { pooling: 'mean', normalize: true });
+      return Array.from(output.data);
+    })();
+
+    return await Promise.race([generatePromise, timeoutPromise]);
   } catch (error) {
-    console.error('Error generating embedding:', error);
+    console.error('Error generating embedding:', error.message || error);
     return null;
   }
 };

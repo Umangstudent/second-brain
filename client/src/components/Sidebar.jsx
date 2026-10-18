@@ -9,7 +9,7 @@ const navItems = [
   { path: '/documents', label: 'Documents', icon: FileText },
 ];
 
-const Sidebar = ({ isOpen, onToggle, mobileIsOpen, onMobileClose }) => {
+const Sidebar = ({ isOpen, onToggle, mobileIsOpen, onMobileClose, onOpenAI, isAIOpen }) => {
   const location = useLocation();
   const { user } = useAuth();
 
@@ -66,10 +66,21 @@ const Sidebar = ({ isOpen, onToggle, mobileIsOpen, onMobileClose }) => {
           <div className="my-6 border-t border-white/10" />
 
           <button
-            className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg text-white/70 hover:bg-purple-500/20 hover:text-purple-400 transition-all group relative`}
+            onClick={() => {
+              if (onOpenAI) onOpenAI();
+              if (mobileIsOpen && onMobileClose) onMobileClose();
+            }}
+            className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all group relative cursor-pointer ${
+              isAIOpen 
+                ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30' 
+                : 'text-white/70 hover:bg-purple-500/15 hover:text-purple-300'
+            }`}
             title={!isOpen ? "AI Assistant" : undefined}
           >
-            <Bot className="w-5 h-5 flex-shrink-0 text-purple-400" />
+            {isAIOpen && (
+              <div className="absolute left-0 top-0 bottom-0 w-1 bg-purple-500 rounded-r" />
+            )}
+            <Bot className={`w-5 h-5 flex-shrink-0 text-purple-400 ${isAIOpen ? 'animate-pulse' : ''}`} />
             <span className={`font-medium whitespace-nowrap transition-opacity duration-300 ${!isOpen && 'md:opacity-0 md:hidden'} ${!mobileIsOpen && 'opacity-0 md:opacity-100'}`}>
               AI Assistant
             </span>

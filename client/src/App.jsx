@@ -1,9 +1,10 @@
 import React, { Suspense, useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Bot } from 'lucide-react';
 import Navbar from './components/Navbar';
 import Sidebar from './components/Sidebar';
+import AIChatPanel from './components/AIChatPanel';
 
 // Lazy load pages for code splitting
 const Login = React.lazy(() => import('./pages/Login'));
@@ -30,6 +31,7 @@ const PageLoader = () => (
 const AppLayout = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isAIChatOpen, setIsAIChatOpen] = useState(false);
   const location = useLocation();
 
   // Close mobile menu on route change
@@ -38,7 +40,7 @@ const AppLayout = ({ children }) => {
   }, [location.pathname]);
 
   return (
-    <div className="min-h-screen flex flex-col bg-surface">
+    <div className="min-h-screen flex flex-col bg-surface relative">
       <Navbar onMenuClick={() => setMobileMenuOpen(true)} />
       <div className="flex flex-1 overflow-hidden relative">
         <Sidebar 
@@ -46,11 +48,28 @@ const AppLayout = ({ children }) => {
           onToggle={() => setSidebarOpen(!sidebarOpen)} 
           mobileIsOpen={mobileMenuOpen}
           onMobileClose={() => setMobileMenuOpen(false)}
+          onOpenAI={() => setIsAIChatOpen(prev => !prev)}
+          isAIOpen={isAIChatOpen}
         />
         <main className="flex-1 overflow-y-auto relative z-0 scroll-smooth">
           {children}
         </main>
       </div>
+
+      {/* Global AI Chat Slide-over */}
+      <AIChatPanel isOpen={isAIChatOpen} onClose={() => setIsAIChatOpen(false)} />
+
+      {/* Floating Quick AI Button */}
+      <button
+        onClick={() => setIsAIChatOpen(prev => !prev)}
+        className="fixed bottom-6 right-6 z-40 p-3.5 rounded-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-xl shadow-purple-600/30 hover:scale-105 active:scale-95 transition-all flex items-center gap-2 group border border-white/20 cursor-pointer"
+        title="Open AI Assistant"
+      >
+        <Bot className="w-5 h-5 text-white animate-pulse" />
+        <span className="text-xs font-semibold max-w-0 overflow-hidden group-hover:max-w-xs transition-all duration-300 whitespace-nowrap">
+          AI Assistant
+        </span>
+      </button>
     </div>
   );
 };

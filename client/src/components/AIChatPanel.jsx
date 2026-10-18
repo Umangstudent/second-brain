@@ -19,6 +19,16 @@ const AIChatPanel = ({ isOpen, onClose }) => {
     scrollToBottom();
   }, [messages, isOpen]);
 
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && isOpen) {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!input.trim() || isLoading) return;
@@ -30,13 +40,15 @@ const AIChatPanel = ({ isOpen, onClose }) => {
 
     try {
       const res = await api.post('/ai/chat', { message: userMsg });
+      const replyContent = res.data.answer || res.data.reply || 'Sorry, I did not understand that.';
       setMessages(prev => [...prev, { 
         role: 'ai', 
-        content: res.data.reply || 'Sorry, I did not understand that.',
+        content: replyContent,
         sources: res.data.sources 
       }]);
     } catch (error) {
-      setMessages(prev => [...prev, { role: 'ai', content: 'Oops, something went wrong while processing your request. Please try again later.' }]);
+      const errorMsg = error.response?.data?.error || 'Oops, something went wrong while processing your request. Please check if your Groq API key is valid.';
+      setMessages(prev => [...prev, { role: 'ai', content: errorMsg }]);
     } finally {
       setIsLoading(false);
     }
@@ -46,7 +58,7 @@ const AIChatPanel = ({ isOpen, onClose }) => {
     <>
       {isOpen && (
         <div 
-          className="fixed inset-0 bg-surface/50 backdrop-blur-sm z-[60] md:hidden"
+          className="fixed inset-0 bg-surface/60 backdrop-blur-sm z-[65] animate-fade-in"
           onClick={onClose}
         />
       )}

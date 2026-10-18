@@ -1,4 +1,4 @@
-import { StickyNote, Link2, FileText, Share2, Edit2, Trash2, Globe } from 'lucide-react';
+import { StickyNote, Link2, FileText, Share2, Edit2, Trash2, Globe, Download, ExternalLink } from 'lucide-react';
 import TagBadge from './TagBadge';
 
 const ContentCard = ({ item, type, onEdit, onDelete, onShare }) => {
@@ -9,6 +9,13 @@ const ContentCard = ({ item, type, onEdit, onDelete, onShare }) => {
   }[type] || { icon: StickyNote, color: 'text-brand-400', bg: 'bg-brand-500/10' };
 
   const Icon = config.icon;
+
+  const formatFileSize = (bytes) => {
+    if (!bytes) return '';
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+  };
 
   return (
     <div className="glass-card rounded-xl p-5 group hover:scale-[1.02] transition-all duration-300 flex flex-col h-full relative overflow-hidden">
@@ -33,8 +40,36 @@ const ContentCard = ({ item, type, onEdit, onDelete, onShare }) => {
             {item.url}
           </a>
         )}
+
+        {type === 'document' && (
+          <div className="mb-3 flex items-center justify-between gap-2 p-2.5 rounded-lg bg-white/5 border border-white/10">
+            <div className="flex items-center gap-2 min-w-0">
+              <FileText className="w-4 h-4 text-amber-400 flex-shrink-0" />
+              <div className="truncate text-xs">
+                <span className="text-white/80 font-medium truncate block">{item.originalName || item.title}</span>
+                {item.fileSize && (
+                  <span className="text-white/40">{formatFileSize(item.fileSize)}</span>
+                )}
+              </div>
+            </div>
+            {item.fileUrl && (
+              <a 
+                href={item.fileUrl} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                download
+                className="px-2.5 py-1 text-xs rounded-md bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 flex items-center gap-1 transition-colors flex-shrink-0"
+                title="View / Download file"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>Open</span>
+              </a>
+            )}
+          </div>
+        )}
+
         <p className="text-white/60 text-sm line-clamp-3 leading-relaxed">
-          {item.content || item.description || 'No content available.'}
+          {item.content || item.description || 'No preview available.'}
         </p>
       </div>
 

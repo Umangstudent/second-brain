@@ -24,6 +24,12 @@ const documentSchema = new mongoose.Schema({
   fileType: {
     type: String
   },
+  fileUrl: {
+    type: String
+  },
+  filePath: {
+    type: String
+  },
   tags: {
     type: [String]
   },

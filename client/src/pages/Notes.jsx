@@ -45,12 +45,13 @@ const Notes = () => {
       // Fallback to empty array if endpoints don't exist yet
       try {
         const res = await api.get(`/notes?${query.toString()}`);
-        setNotes(res.data.items || []);
-        setTotalPages(res.data.totalPages || 1);
+        const items = res.data.data || res.data.items || [];
+        setNotes(items);
+        setTotalPages(res.data.pagination?.totalPages || res.data.totalPages || 1);
         
         // Extract unique tags for the filter
         const allTags = new Set([...availableTags]);
-        (res.data.items || []).forEach(item => {
+        items.forEach(item => {
           (item.tags || []).forEach(t => allTags.add(t));
         });
         setAvailableTags(Array.from(allTags));

@@ -5,14 +5,15 @@ const { v4: uuidv4 } = require('uuid');
 
 exports.getNotes = async (req, res) => {
   try {
-    const { search, tags, page, limit, sort, all } = req.query;
+    const { tags, page, limit, sort, all } = req.query;
+    const searchTerm = req.query.search || req.query.q;
     const isAdmin = req.user.role === 'admin';
     let query = (isAdmin && all === 'true') ? {} : { user: req.user.id };
 
-    if (search) {
+    if (searchTerm) {
       query.$or = [
-        { title: { $regex: search, $options: 'i' } },
-        { content: { $regex: search, $options: 'i' } }
+        { title: { $regex: searchTerm, $options: 'i' } },
+        { content: { $regex: searchTerm, $options: 'i' } }
       ];
     }
 
@@ -22,8 +23,14 @@ exports.getNotes = async (req, res) => {
 
     let sortObj = { createdAt: -1 };
     if (sort) {
-      const [field, order] = sort.split(':');
-      sortObj[field] = order === 'asc' ? 1 : -1;
+      if (sort === 'newest') sortObj = { createdAt: -1 };
+      else if (sort === 'oldest') sortObj = { createdAt: 1 };
+      else if (sort === 'az') sortObj = { title: 1 };
+      else if (sort === 'za') sortObj = { title: -1 };
+      else if (sort.includes(':')) {
+        const [field, order] = sort.split(':');
+        sortObj[field] = order === 'asc' ? 1 : -1;
+      }
     }
 
     const result = await paginate(Note, query, page, limit, sortObj);
@@ -47,14 +54,6 @@ exports.getNoteById = async (req, res) => {
 exports.createNote = async (req, res) => {
   try {
     const { title, content, tags, isPublic } = req.body;
-    
-    let embedding = [];
-    try {
-      embedding = await generateEmbedding(`${title} ${content || ''}`);
-    } catch (embError) {
-      console.error('Embedding generation failed:', embError);
-    }
-
     const shareHash = isPublic ? uuidv4() : undefined;
 
     const note = await Note.create({
@@ -64,8 +63,20 @@ exports.createNote = async (req, res) => {
       tags,
       isPublic: !!isPublic,
       shareHash,
-      embedding: embedding || []
+      embedding: []
     });
+
+    // Generate embedding in background
+    generateEmbedding(`${title} ${content || ''}`)
+      .then(emb => {
+        if (emb && emb.length) {
+          Note.findByIdAndUpdate(note._id, { embedding: emb }).exec().catch(() => {});
+        }
+      })
+      .catch(embError => {
+        console.error('Embedding generation failed (background):', embError);
+      });
+
     res.status(201).json(note);
   } catch (error) {
     res.status(500).json({ error: 'Server error' });

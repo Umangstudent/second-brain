@@ -11,6 +11,8 @@ const paginate = async (Model, query, page = 1, limit = 12, sort = { createdAt: 
 
   return {
     data,
+    items: data,
+    totalPages,
     pagination: {
       currentPage: Number(page),
       totalPages,

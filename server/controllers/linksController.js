@@ -5,15 +5,16 @@ const { v4: uuidv4 } = require('uuid');
 
 exports.getLinks = async (req, res) => {
   try {
-    const { search, tags, page, limit, sort, all } = req.query;
+    const { tags, page, limit, sort, all } = req.query;
+    const searchTerm = req.query.search || req.query.q;
     const isAdmin = req.user.role === 'admin';
     let query = (isAdmin && all === 'true') ? {} : { user: req.user.id };
 
-    if (search) {
+    if (searchTerm) {
       query.$or = [
-        { title: { $regex: search, $options: 'i' } },
-        { url: { $regex: search, $options: 'i' } },
-        { description: { $regex: search, $options: 'i' } }
+        { title: { $regex: searchTerm, $options: 'i' } },
+        { url: { $regex: searchTerm, $options: 'i' } },
+        { description: { $regex: searchTerm, $options: 'i' } }
       ];
     }
 
@@ -23,8 +24,14 @@ exports.getLinks = async (req, res) => {
 
     let sortObj = { createdAt: -1 };
     if (sort) {
-      const [field, order] = sort.split(':');
-      sortObj[field] = order === 'asc' ? 1 : -1;
+      if (sort === 'newest') sortObj = { createdAt: -1 };
+      else if (sort === 'oldest') sortObj = { createdAt: 1 };
+      else if (sort === 'az') sortObj = { title: 1 };
+      else if (sort === 'za') sortObj = { title: -1 };
+      else if (sort.includes(':')) {
+        const [field, order] = sort.split(':');
+        sortObj[field] = order === 'asc' ? 1 : -1;
+      }
     }
 
     const result = await paginate(Link, query, page, limit, sortObj);
@@ -48,14 +55,6 @@ exports.getLinkById = async (req, res) => {
 exports.createLink = async (req, res) => {
   try {
     const { title, url, description, tags, isPublic } = req.body;
-    
-    let embedding = [];
-    try {
-      embedding = await generateEmbedding(`${title} ${description || ''}`);
-    } catch (embError) {
-      console.error('Embedding generation failed:', embError);
-    }
-
     const shareHash = isPublic ? uuidv4() : undefined;
 
     const link = await Link.create({
@@ -66,8 +65,20 @@ exports.createLink = async (req, res) => {
       tags,
       isPublic: !!isPublic,
       shareHash,
-      embedding: embedding || []
+      embedding: []
     });
+
+    // Generate embedding in background
+    generateEmbedding(`${title} ${description || ''}`)
+      .then(emb => {
+        if (emb && emb.length) {
+          Link.findByIdAndUpdate(link._id, { embedding: emb }).exec().catch(() => {});
+        }
+      })
+      .catch(embError => {
+        console.error('Embedding generation failed (background):', embError);
+      });
+
     res.status(201).json(link);
   } catch (error) {
     res.status(500).json({ error: 'Server error' });

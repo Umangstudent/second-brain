@@ -6,14 +6,15 @@ const { v4: uuidv4 } = require('uuid');
 
 exports.getDocuments = async (req, res) => {
   try {
-    const { search, tags, page, limit, sort, all } = req.query;
+    const { tags, page, limit, sort, all } = req.query;
+    const searchTerm = req.query.search || req.query.q;
     const isAdmin = req.user.role === 'admin';
     let query = (isAdmin && all === 'true') ? {} : { user: req.user.id };
 
-    if (search) {
+    if (searchTerm) {
       query.$or = [
-        { title: { $regex: search, $options: 'i' } },
-        { content: { $regex: search, $options: 'i' } }
+        { title: { $regex: searchTerm, $options: 'i' } },
+        { content: { $regex: searchTerm, $options: 'i' } }
       ];
     }
 
@@ -23,13 +24,20 @@ exports.getDocuments = async (req, res) => {
 
     let sortObj = { createdAt: -1 };
     if (sort) {
-      const [field, order] = sort.split(':');
-      sortObj[field] = order === 'asc' ? 1 : -1;
+      if (sort === 'newest') sortObj = { createdAt: -1 };
+      else if (sort === 'oldest') sortObj = { createdAt: 1 };
+      else if (sort === 'az') sortObj = { title: 1 };
+      else if (sort === 'za') sortObj = { title: -1 };
+      else if (sort.includes(':')) {
+        const [field, order] = sort.split(':');
+        sortObj[field] = order === 'asc' ? 1 : -1;
+      }
     }
 
     const result = await paginate(Document, query, page, limit, sortObj);
     res.json(result);
   } catch (error) {
+    console.error('getDocuments error:', error);
     res.status(500).json({ error: 'Server error' });
   }
 };
@@ -51,38 +59,68 @@ exports.createDocument = async (req, res) => {
     let content = '';
 
     if (req.file) {
-      try {
-        content = fs.readFileSync(req.file.path, 'utf8');
-      } catch (readError) {
-        console.error('Error reading file:', readError);
-        content = ''; // Fallback or handle differently based on fileType
+      const isText = req.file.mimetype?.startsWith('text/') ||
+        req.file.mimetype === 'application/json' ||
+        /\.(txt|md|csv|json|js|jsx|ts|tsx|html|css|py)$/i.test(req.file.originalname);
+
+      if (isText) {
+        try {
+          content = fs.readFileSync(req.file.path, 'utf8').slice(0, 5000);
+        } catch (readError) {
+          content = '';
+        }
+      } else {
+        content = `Uploaded file: ${req.file.originalname} (${(req.file.size / 1024).toFixed(1)} KB)`;
       }
     }
 
-    let embedding = [];
-    try {
-      embedding = await generateEmbedding(`${title} ${content}`);
-    } catch (embError) {
-      console.error('Embedding generation failed:', embError);
+    let parsedTags = [];
+    if (tags) {
+      if (Array.isArray(tags)) {
+        parsedTags = tags;
+      } else {
+        try {
+          const parsed = JSON.parse(tags);
+          parsedTags = Array.isArray(parsed) ? parsed : [tags];
+        } catch {
+          parsedTags = tags.split(',').map(t => t.trim()).filter(Boolean);
+        }
+      }
     }
 
     const shareHash = isPublic === 'true' || isPublic === true ? uuidv4() : undefined;
 
     const doc = await Document.create({
       user: req.user.id,
-      title,
+      title: title || (req.file ? req.file.originalname : 'Untitled Document'),
       content,
       originalName: req.file ? req.file.originalname : undefined,
       fileSize: req.file ? req.file.size : undefined,
       fileType: req.file ? req.file.mimetype : undefined,
-      tags: tags ? (Array.isArray(tags) ? tags : tags.split(',')) : [],
+      fileUrl: req.file ? `/uploads/${req.file.filename}` : undefined,
+      filePath: req.file ? req.file.path : undefined,
+      tags: parsedTags,
       isPublic: isPublic === 'true' || isPublic === true,
       shareHash,
-      embedding: embedding || []
+      embedding: []
     });
+
+    // Generate embedding in background so user doesn't wait 90 seconds
+    const textToEmbed = `${doc.title} ${(content || '').slice(0, 500)}`;
+    generateEmbedding(textToEmbed)
+      .then(emb => {
+        if (emb && emb.length) {
+          Document.findByIdAndUpdate(doc._id, { embedding: emb }).exec().catch(() => {});
+        }
+      })
+      .catch(embError => {
+        console.error('Embedding generation failed (background):', embError);
+      });
+
     res.status(201).json(doc);
   } catch (error) {
-    res.status(500).json({ error: 'Server error' });
+    console.error('createDocument error:', error);
+    res.status(500).json({ error: 'Server error creating document' });
   }
 };
 
@@ -126,6 +164,15 @@ exports.deleteDocument = async (req, res) => {
     const filter = req.user.role === 'admin' ? { _id: req.params.id } : { _id: req.params.id, user: req.user.id };
     const doc = await Document.findOneAndDelete(filter);
     if (!doc) return res.status(404).json({ error: 'Document not found' });
+
+    if (doc.filePath && fs.existsSync(doc.filePath)) {
+      try {
+        fs.unlinkSync(doc.filePath);
+      } catch (e) {
+        console.error('Failed to unlink file:', e);
+      }
+    }
+
     res.json({ message: 'Document removed' });
   } catch (error) {
     res.status(500).json({ error: 'Server error' });

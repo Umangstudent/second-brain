@@ -40,11 +40,12 @@ const Links = () => {
 
       try {
         const res = await api.get(`/links?${query.toString()}`);
-        setLinks(res.data.items || []);
-        setTotalPages(res.data.totalPages || 1);
+        const items = res.data.data || res.data.items || [];
+        setLinks(items);
+        setTotalPages(res.data.pagination?.totalPages || res.data.totalPages || 1);
         
         const allTags = new Set([...availableTags]);
-        (res.data.items || []).forEach(item => {
+        items.forEach(item => {
           (item.tags || []).forEach(t => allTags.add(t));
         });
         setAvailableTags(Array.from(allTags));
